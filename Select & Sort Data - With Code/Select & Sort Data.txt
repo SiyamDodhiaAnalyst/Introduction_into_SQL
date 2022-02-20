@@ -1,0 +1,53 @@
+-- Select & Sort Data Exercises ---
+
+--1--
+--ANS: Travel--
+SELECT
+  name,
+  category_id
+FROM
+  dvd_rentals.category 
+order by category_id desc; 
+
+
+--2-- 
+-- ANS: HOME PITY--
+SELECT 
+  title, 
+  length, 
+  rating,
+  replacement_cost
+From dvd_rentals.film
+order by length desc, replacement_cost 
+LIMIT 10; 
+
+--3--
+-- ANS: Jon Stephens--
+SELECT
+  manager,
+  total_sales
+FROM dvd_rentals.sales_by_store
+order by total_sales desc;
+
+--4--
+-- ANS: 31390--
+SELECT
+  postal_code,
+  city_id 
+FROM dvd_rentals.address
+order by city_id desc
+limit 5;
+
+-- APPENDIX: Order by additional notes - NULLS --
+WITH test_data (sample_values) AS (
+VALUES
+(null),
+('0123'),
+('_123'),
+(' 123'),
+('(abc'),
+('  abc'),
+('bca')
+)
+SELECT * FROM test_data
+ORDER BY 1 NULLS FIRST;
