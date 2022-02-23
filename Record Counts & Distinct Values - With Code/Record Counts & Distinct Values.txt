@@ -1,0 +1,110 @@
+-- See the RAW data -- 
+SELECT 
+  *
+FROM dvd_rentals.film_list;
+
+
+-- 2. How Many Records -- 
+
+-- How Many Records: counts the number of rows in a data -- 
+SELECT 
+  count(*) AS row_count
+FROM dvd_rentals.film_list;
+
+
+-- 3. DISTINCT For Unique Values -- 
+
+-- Unique Column Values:  obtain unique values from a deduplicated target column -- 
+SELECT DISTINCT
+  rating
+FROM dvd_rentals.film_list;
+
+-- Count of Unique Values:  how many unique values there are in a column -- 
+SELECT 
+  COUNT(DISTINCT category) AS unique_category_count
+FROM dvd_rentals.film_list;
+
+
+-- 4. Group By Counts -- 
+
+-- Group by Counts: finding the count for each unique value in a column -- 
+SELECT
+  rating,
+  COUNT(*) AS record_count
+FROM dvd_rentals.film_list
+GROUP BY rating
+ORDER BY record_count DESC;
+
+-- Adding a percentage column: rounding to 2 decimal place --
+SELECT 
+  rating,
+  COUNT(*) AS frequency, 
+  ROUND( 
+    100 * COUNT(*) :: NUMERIC / SUM(COUNT(*)) OVER (), 
+    2 --2 d.p.-- 
+  ) AS percentage
+FROM dvd_rentals.film_list
+GROUP BY rating
+ORDER BY frequency DESC;
+
+-- 5. Counts For Multiple Column Combinations -- 
+
+SELECT 
+  rating, 
+  category, 
+  COUNT(*) AS frequency
+FROM dvd_rentals.film_list
+GROUP BY rating, category
+ORDER BY frequency DESC; 
+
+-- Ordering by positional number instead of column names -- 
+SELECT 
+  rating, 
+  category, 
+  COUNT(*) AS frequency
+FROM dvd_rentals.film_list
+GROUP BY 1, 2 
+ORDER BY frequency DESC;
+
+-- EXERCISES --
+
+-- 1 --
+SELECT 
+  actor_id,
+  COUNT(DISTINCT film_id)
+FROM dvd_rentals.film_actor
+GROUP BY actor_id
+ORDER BY 2 DESC;
+
+-- 2 --
+SELECT 
+  price, 
+  COUNT(DISTINCT fid) AS frequency
+FROM dvd_rentals.nicer_but_slower_film_list
+GROUP BY price
+ORDER BY frequency DESC; 
+
+-- 3 -- 
+SELECT 
+  COUNT(DISTINCT country_id) AS unique_countries
+FROM dvd_rentals.city;
+
+-- 4 --
+SELECT 
+  category,
+  ROUND( 
+    100 * total_sales :: NUMERIC / SUM(total_sales) OVER (), 
+    2 --2 d.p.-- 
+  ) AS percentage
+FROM dvd_rentals.sales_by_film_category;
+
+-- 5 --
+SELECT
+  category,
+  ROUND(
+    100 * COUNT(DISTINCT fid) :: NUMERIC / SUM(COUNT(DISTINCT fid)) OVER (),
+    2
+  ) AS percentage
+FROM dvd_rentals.film_list
+GROUP BY category
+ORDER BY category;

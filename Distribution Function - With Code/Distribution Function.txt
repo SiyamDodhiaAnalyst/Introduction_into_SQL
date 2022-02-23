@@ -1,0 +1,147 @@
+-- Summary Statistics Carry Over --  
+SELECT
+  'weight' AS measure,
+  ROUND(MIN(measure_value), 2) AS min_value,
+  ROUND(MAX(measure_value), 2) AS max_value,
+  ROUND(AVG(measure_value), 2) AS avg_value,
+  ROUND(
+    CAST(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY measure_value) AS numeric), 
+    2
+  ) AS median_value,
+  ROUND(
+    MODE() WITHIN GROUP (ORDER BY measure_value),
+    2
+  ) AS mode_value, 
+  ROUND(STDDEV(measure_value), 2) AS std_value, 
+  ROUND(VARIANCE(measure_value), 2) AS variance_value
+FROM health.user_logs
+WHERE measure = 'weight';
+  --AND measure_value BETWEEN 1 AND 201;
+
+-- Cumulative Distribution Function: Algorithmic thinking using bucketing (NTILE) of 100 buckets --
+WITH cte_ntile AS (
+  SELECT
+    measure_value, 
+    NTILE(100) OVER(
+      ORDER BY
+        measure_value
+    ) AS percentile 
+  FROM health.user_logs
+)
+SELECT
+  percentile,
+  MIN(measure_value) AS floor_value,
+  MAX(measure_value) AS cailing_value,
+  COUNT(*) AS percentile_counts
+FROM cte_ntile 
+GROUP BY percentile
+ORDER BY percentile; 
+
+-- Window function for sorting values (DESC): Row, Rank, Dense Rank -- 
+WITH percentile_values AS(
+  SELECT 
+    measure_value,
+    NTILE(100) OVER(
+      ORDER BY
+        measure_value
+      ) AS percentile
+    FROM health.user_logs
+    WHERE measure = 'weight'
+)
+SELECT
+  measure_value, 
+  ROW_NUMBER() OVER (ORDER BY measure_value DESC) AS row_number_order,
+  RANK() OVER (ORDER BY measure_value DESC) AS rank_order,
+  DENSE_RANK() OVER (ORDER BY measure_value DESC) AS dense_rank_order 
+FROM percentile_values
+WHERE percentile = 100
+ORDER BY measure_value DESC; 
+
+-- DIFFERENCE BETWEEN RANK AND DENSE RANK -- 
+  -- RANK and DENSE_RANK will assign the grades the same rank depending 
+  -- on how they fall compared to the other values. However, RANK will then 
+  -- skip the next available ranking value whereas DENSE_RANK would still 
+  -- use the next chronological ranking value.
+-- Dense rank will give you how many unique values there are in the data 
+
+-- Window function for sorting values (ASCE): Row, Rank, Dense Rank -- 
+WITH percentile_values AS (
+  SELECT
+    measure_value, 
+    NTILE(100) OVER(
+      ORDER BY 
+        measure_value
+    ) AS percentile
+  FROM health.user_logs
+  WHERE measure = 'weight'
+)
+SELECT
+  measure_value,
+  ROW_NUMBER() OVER (ORDER BY measure_value) AS row_number_order,
+  RANK() OVER (ORDER BY measure_value) AS rank_order,
+  DENSE_RANK() OVER (ORDER BY measure_value) AS dense_rank_order 
+FROM percentile_values
+WHERE percentile = 1
+ORDER BY measure_value;
+
+-- creating a clean table with reasonable weight values in measure values where measure = 'weight' --
+DROP TABLE IF EXISTS clean_weight_logs;
+CREATE TEMP TABLE clean_weight_logs AS (
+  SELECT
+    *
+  FROM health.user_logs
+  WHERE measure = 'weight'
+    AND measure_value > 0
+    AND measure_value < 201
+); 
+SELECT
+  ROUND(MIN(measure_value), 2) AS minimum_value, 
+  ROUND(MAX(measure_value), 2) AS maximum_value,
+  ROUND(AVG(measure_value), 2) AS average_value,
+  ROUND(
+    CAST(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY measure_value) AS NUMERIC), 
+    2
+  ) AS median_value, 
+  ROUND(
+    MODE() WITHIN GROUP (ORDER BY measure_value), 
+    2
+  ) AS mode_value,
+  ROUND(STDDEV(measure_value), 2) AS stddev_value, 
+  ROUND(VARIANCE(measure_value), 2) AS variance_value
+FROM clean_weight_logs;
+  
+-- Cumulative Distribution Function Treated Data: Algorithmic thinking using bucketing (NTILE) of 100 buckets --
+  -- PLOT: Line - ceiling_value as x-axis, percentile as y-axis 
+WITH percentile_values AS (
+  SELECT
+    measure_value,
+    NTILE(100) OVER (
+      ORDER BY 
+        measure_value
+    ) AS percentile
+  FROM clean_weight_logs
+)
+SELECT
+  percentile,
+  MIN(measure_value) AS floor_value, 
+  MAX(measure_value) AS ceiling_value,
+  COUNT(*) AS percentile_counts
+FROM percentile_values
+GROUP BY percentile
+ORDER BY percentile;
+
+-- Histograms using vertical bar charts --
+SELECT
+  MIN(measure_value) AS minimum_value, 
+  MAX(measure_value) AS maximum_value
+FROM clean_weight_logs;
+
+-- creating buckets from the clean data to use for bar chart 0 to 200 with 50 buckets -- 
+  -- PLOT: Bar Vertical - measure_value as bar_label (x), frequency as bar_value (y)
+SELECT
+  WIDTH_BUCKET(measure_value, 0, 200, 50) AS bucket,
+  AVG(measure_value) AS measure_value,
+  COUNT(*) AS frequency 
+FROM clean_weight_logs
+GROUP BY bucket 
+ORDER BY bucket; 
